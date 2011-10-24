@@ -6,13 +6,13 @@ module RailsAdmin
 
     before_filter :_authenticate!
     before_filter :_authorize!
-    before_filter :set_plugin_name
 
-    helper_method :_current_user, :_attr_accessible_role
+    helper_method :_current_user, :_attr_accessible_role, :_get_plugin_name
 
     def get_model
       model_name = to_model_name(params[:model_name])
       @abstract_model = RailsAdmin::AbstractModel.new(model_name)
+      not_found unless @abstract_model
       @model_config = RailsAdmin.config(@abstract_model)
       not_found if @model_config.excluded?
       @properties = @abstract_model.properties
@@ -29,7 +29,11 @@ module RailsAdmin
       not_found unless @object
     end
 
+
     private
+    def _get_plugin_name
+      @plugin_name_array ||= [RailsAdmin.config.main_app_name.is_a?(Proc) ? instance_eval(&RailsAdmin.config.main_app_name) : RailsAdmin.config.main_app_name].flatten
+    end
 
     def _authenticate!
       instance_eval &RailsAdmin::Config.authenticate_with
@@ -42,18 +46,13 @@ module RailsAdmin
     def _current_user
       instance_eval &RailsAdmin::Config.current_user_method
     end
-    
+
     def _attr_accessible_role
       instance_eval &RailsAdmin::Config.attr_accessible_role
     end
-    
-    def set_plugin_name
-      @plugin_name_array = [instance_eval(&RailsAdmin.config.main_app_name)].flatten
-      @plugin_name = @plugin_name_array.join(' ')
-    end
 
     def not_found
-      render :file => Rails.root.join('public', '404.html'), :layout => false, :status => 404
+      render :file => Rails.root.join('public', '404.html'), :layout => false, :status => :not_found
     end
 
     def rails_admin_controller?

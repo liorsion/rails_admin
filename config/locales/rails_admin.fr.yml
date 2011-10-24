@@ -1,6 +1,11 @@
 fr:
   home:
     name: "Home"
+  views:
+    pagination:
+      previous: "&laquo; Préc."
+      next: "Suivant &raquo;"
+      truncate: "…"
   admin:
     dashboard:
       pagename: "Administration"

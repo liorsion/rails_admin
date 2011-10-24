@@ -4,6 +4,11 @@
 pl:
   home:
     name: "start"
+  views:
+    pagination:
+      previous: "&laquo; Prev"
+      next: "Next &raquo;"
+      truncate: "…"
   admin:
     dashboard:
       pagename: "Panel administracyjny"
@@ -103,4 +108,4 @@ pl:
       for_model: "historia"
       index: "lista"
       dashboard: "tablica"
-      
+

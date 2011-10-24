@@ -256,7 +256,7 @@ describe "RailsAdmin Basic List" do
       end
 
       visit index_path(:model_name => "player")
-      should have_content("$.filters.append('Name', 'name', 'string', '', '', '', 1);$.filters.append('Team', 'team', 'belongs_to_association', '', '', '', 2);")
+      should have_content("$.filters.append('Name', 'name', 'string', '', '', '', false, '1');$.filters.append('Team', 'team', 'belongs_to_association', '', '', '', false, '2');")
     end
   end
 
@@ -290,7 +290,9 @@ describe "RailsAdmin Basic List" do
     end
 
     it "should paginate correctly" do
-      find('.pagination').should have_content('12…567891011…1920')
+      find('.pagination ul li:first').should have_content("« Prev")
+      find('.pagination ul li:last').should have_content("Next »")
+      find('.pagination ul li.active').should have_content("8")
     end
   end
 
@@ -302,7 +304,9 @@ describe "RailsAdmin Basic List" do
     end
 
     it "should paginate correctly and contain the right item" do
-      find('.pagination').should have_content('12…121314151617181920')
+      find('.pagination ul li:first').should have_content("« Prev")
+      find('.pagination ul li:last').should have_content("Next »")
+      find('.pagination ul li.active').should have_content("20")
     end
   end
 
@@ -382,7 +386,7 @@ describe "RailsAdmin Basic List" do
   describe "list for objects with overridden to_param" do
     before(:each) do
       @ball = FactoryGirl.create :ball
-      
+
       visit index_path(:model_name => "ball")
     end
 

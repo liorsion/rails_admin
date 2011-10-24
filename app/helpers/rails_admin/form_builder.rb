@@ -1,4 +1,4 @@
-ActionView::Base.field_error_proc = lambda { |html_tag, instance| html_tag }
+ActionView::Base.field_error_proc = Proc.new { |html_tag, instance| "<span class=\"field_with_errors\">#{html_tag}</span>".html_safe }
 
 module RailsAdmin
   class FormBuilder < ActionView::Helpers::FormBuilder
@@ -8,7 +8,7 @@ module RailsAdmin
       end.join.html_safe +
       @template.render(:partial => 'submit_buttons')
     end
-    
+
     def fieldset_for(fieldset)
       if (fields = fieldset.fields.map{ |f| f.with(:form => self, :object => @object, :view => @template) }.select(&:visible?)).length > 0
         @template.content_tag :fieldset do
@@ -17,14 +17,14 @@ module RailsAdmin
         end
       end
     end
-    
+
     def field_wrapper_for field
       @template.content_tag(:div, :class => "clearfix field #{'error' if field.errors.present?}", :id => field.dom_id + '_field') do
         label(field.method_name, field.label) +
         input_for(field)
       end
     end
-    
+
     def input_for field
       @template.content_tag(:div, :class => 'input') do
         field_for(field) +
@@ -32,15 +32,15 @@ module RailsAdmin
         help_for(field)
       end
     end
-    
+
     def errors_for field
       field.errors.present? ? @template.content_tag(:span, "#{field.label} #{field.errors.first}", :class => 'help-inline') : ''
     end
-    
+
     def help_for field
       field.help.present? ? @template.content_tag(:span, field.help, :class => 'help-block') : ''
     end
-    
+
     def field_for field
       if field.read_only
         field.pretty_value.html_safe

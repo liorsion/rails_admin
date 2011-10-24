@@ -41,7 +41,7 @@ module RailsAdmin
       @page_type = @abstract_model.pretty_name.downcase
       @page_name = t("admin.index.select", :name => @model_config.label.downcase)
 
-      @objects, @current_page, @page_count, @record_count = list_entries
+      @objects = list_entries
       @schema ||= { :only => @model_config.list.visible_fields.map {|f| f.name } }
 
       respond_to do |format|
@@ -209,7 +209,7 @@ module RailsAdmin
       # maybe
       #   n-levels (backend: possible with xml&json, frontend: not possible?)
       @authorization_adapter.authorize(:export, @abstract_model) if @authorization_adapter
-      
+
       if format = params[:json] && :json || params[:csv] && :csv || params[:xml] && :xml
         request.format = format
         @schema = params[:schema].symbolize if params[:schema] # to_json and to_xml expect symbols for keys AND values.
@@ -236,7 +236,7 @@ module RailsAdmin
       @page_name = t("admin.actions.delete").capitalize + " " + @model_config.label.downcase
       @page_type = @abstract_model.pretty_name.downcase
 
-      @bulk_objects, @current_page, @page_count, @record_count = list_entries
+      @bulk_objects = list_entries
 
       render :action => 'bulk_delete'
     end
@@ -302,8 +302,8 @@ module RailsAdmin
       reversed_sort = (field ? field.sort_reverse? : @model_config.list.sort_reverse?)
       {:sort => column, :sort_reverse => (params[:sort_reverse] == reversed_sort.to_s)}
     end
-    
-    
+
+
     # TODO MOVE TO ActiveRecord
     def get_conditions_hash(query, filters)
 
@@ -343,10 +343,11 @@ module RailsAdmin
         queryable_fields.each do |field|
           searchable_columns = field.searchable_columns.flatten
           searchable_columns.each do |field_infos|
-            statement, value = build_statement(field_infos[:column], field_infos[:type], query, field.search_operator)
-            if statement && value
+            statement, value1, value2 = build_statement(field_infos[:column], field_infos[:type], query, field.search_operator)
+            if statement
               query_statements << statement
-              values << value
+              values << value1 if value1
+              values << value2 if value2
             end
           end
         end
@@ -364,10 +365,11 @@ module RailsAdmin
             field_statements = []
             @filterable_fields[field_name.to_sym].each do |field_infos|
               unless filter_dump[:disabled]
-                statement, value = build_statement(field_infos[:column], field_infos[:type], filter_dump[:value], (filter_dump[:operator] || 'default'))
+                statement, value1, value2 = build_statement(field_infos[:column], field_infos[:type], filter_dump[:value], (filter_dump[:operator] || 'default'))
                 if statement
                   field_statements << statement
-                  values << value if value
+                  values << value1 if value1
+                  values << value2 if value2
                 end
               end
             end
@@ -384,7 +386,7 @@ module RailsAdmin
       conditions += values
       conditions != [""] ? { :conditions => conditions } : {}
     end
-    
+
     def build_statement(column, type, value, operator)
 
       # this operator/value has been discarded (but kept in the dom to override the one stored in the various links of the page)
@@ -491,29 +493,20 @@ module RailsAdmin
     end
 
     def list_entries(other = {})
-      return [get_bulk_objects(params[:bulk_ids]), 1, 1, "unknown"] if params[:bulk_ids].present?
+      return get_bulk_objects(params[:bulk_ids]) if params[:bulk_ids].present?
 
       associations = @model_config.list.fields.select {|f| f.type == :belongs_to_association && !f.polymorphic? }.map {|f| f.association[:name] }
       options = get_sort_hash.merge(get_conditions_hash(params[:query], params[:filters])).merge(other).merge(associations.empty? ? {} : { :include => associations })
 
       scope = @authorization_adapter && @authorization_adapter.query(:index, @abstract_model)
-      current_page = (params[:page] || 1).to_i
 
       if params[:all]
         objects = @abstract_model.all(options, scope)
-        page_count = 1
-        record_count = objects.count
       else
-        options.merge!(:page => current_page, :per_page => @model_config.list.items_per_page)
-        page_count, objects = @abstract_model.paginated(options, scope)
-        options.delete(:page)
-        options.delete(:per_page)
-        options.delete(:offset)
-        options.delete(:limit)
-        record_count = @abstract_model.count(options, scope)
+        options.merge!(:page => (params[:page] || 1).to_i, :per_page => @model_config.list.items_per_page)
+        objects = @abstract_model.paginated(options, scope)
       end
-
-      [objects, current_page, page_count, record_count]
+      objects
     end
 
     def associations_hash
